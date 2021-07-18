@@ -10,7 +10,7 @@ pub struct TState {
 impl TState {
     pub fn new() -> Self {
         Self {
-            driver: Driver::new(),
+            driver: Driver::new("/dev/ttyUSB0"),
             threads: vec![],
         }
     }

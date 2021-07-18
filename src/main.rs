@@ -27,6 +27,7 @@ fn run_experiment_handler(
     server_state: &State<Mutex<TState>>,
 ) -> Status {
     let running = run_state.load(Ordering::SeqCst);
+
     if running {
         return Status::ServiceUnavailable;
     } else {
@@ -42,13 +43,22 @@ fn run_experiment_handler(
 }
 
 #[get("/stop_experiment")]
-fn stop_experiment_handler(run_state: &State<RunState>) -> Status {
+fn stop_experiment_handler(
+    run_state: &State<RunState>,
+    server_state: &State<Mutex<TState>>,
+) -> Status {
     let running = run_state.load(Ordering::SeqCst);
+
     if !running {
         Status::ServiceUnavailable
     } else {
         run_state.swap(false, Ordering::SeqCst);
-        Status::Ok
+        let t = server_state.lock().unwrap().threads.pop().unwrap();
+
+        return match t.join() {
+            Ok(_) => Status::Ok,
+            Err(_) => Status::InternalServerError,
+        };
     }
 }
 
