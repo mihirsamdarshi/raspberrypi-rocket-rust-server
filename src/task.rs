@@ -7,18 +7,16 @@ use rocket::serde::Deserialize;
 use serialport::{ClearBuffer, DataBits, FlowControl, Parity, SerialPortBuilder, StopBits};
 
 #[derive(Deserialize, Debug)]
-pub struct ExperimentInfo {
-    experiment_name: String,
-    experiment_id: u32,
-    emulsifier_volume: u32,
+pub struct TaskInfo {
+    task_name: String,
+    task_id: u32,
+    additive_volume: u32,
     measurement_interval: u32,
 }
 
 #[derive(Clone, Debug)]
 pub struct Driver {
-    server_url: String,
     device: SerialPortBuilder,
-    pump: Option<String>,
 }
 
 pub type RunState = Arc<AtomicBool>;
@@ -26,26 +24,36 @@ pub type RunState = Arc<AtomicBool>;
 impl Driver {
     pub fn new(dev: &str) -> Self {
         Self {
-            server_url: String::from("http://localhost:8000"),
             device: serialport::new(dev, 9_600)
                 .data_bits(DataBits::Eight)
                 .parity(Parity::None)
                 .stop_bits(StopBits::One)
                 .flow_control(FlowControl::Software)
                 .timeout(Duration::MAX),
-            pump: None,
         }
     }
 
-    pub fn run_experiment(&self, experiment: &ExperimentInfo, running: RunState) {
-        let port = &self.device.clone().open().unwrap();
+    pub fn check_port(&self) -> Result<String, String> {
+        let port_res = &self.device.clone().open();
+        match port_res {
+            Ok(p) => Ok(format!(
+                "Port check initialized successfully {}",
+                p.name().unwrap(),
+            )),
+            Err(e) => Err(format!(
+                "Port check unable to initialize successfully. Error: {}",
+                e.description
+            )),
+        }
+    }
+
+    pub fn run_task(&self, task: &TaskInfo, running: RunState) {
+        let port_res = &self.device.clone().open();
+        let port = port_res.as_ref().expect("Unable to initialize port");
         port.clear(ClearBuffer::All).unwrap();
 
         while running.load(Ordering::SeqCst) {
-            println!(
-                "{}, {}",
-                experiment.experiment_name, experiment.experiment_id
-            );
+            println!("{}, {}", task.task_name, task.task_id);
             thread::sleep(Duration::from_millis(2000));
         }
     }

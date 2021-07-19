@@ -1,6 +1,6 @@
 use std::thread;
 
-use crate::experiment::Driver;
+use crate::task::Driver;
 
 pub struct TState {
     pub driver: Driver,
