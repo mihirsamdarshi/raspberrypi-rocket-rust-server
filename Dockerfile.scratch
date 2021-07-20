@@ -14,23 +14,17 @@ COPY Cargo.lock Cargo.lock
 
 # Copy the source code
 COPY src/ ./src/
-COPY Rocket.toml Rocket.toml
 
 # Build for release.
 RUN rm -rf target/release/deps/rust-server*
 RUN cargo build --release --target=x86_64-unknown-linux-musl
 
-FROM debian:buster-slim as compiled
-RUN apt-get update \
-    && apt-get install -y ca-certificates libudev-dev --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+FROM scratch
 
-COPY --from=builder /rust-server/target/x86_64-unknown-linux-musl/release/rust-server /bin/rust-server
-RUN chmod +x /bin/rust-server
-
-WORKDIR tmp
+COPY --from=builder /rust-server/target/x86_64-unknown-linux-musl/release/rust-server .
 COPY Rocket.toml Rocket.toml
 
 EXPOSE 7373
+USER 1000
 
-ENTRYPOINT ["/bin/rust-server"]
+ENTRYPOINT ["./rust-server"]
